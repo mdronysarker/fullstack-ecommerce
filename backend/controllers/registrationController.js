@@ -1,5 +1,7 @@
 const User = require("../model/userModel");
 const bcrypt = require("bcrypt");
+const nodemailer = require("nodemailer");
+const otpGenerator = require("otp-generator");
 
 const registrationController = async (req, res) => {
   const { name, email, password } = req.body;
@@ -18,17 +20,38 @@ const registrationController = async (req, res) => {
   if (existingUser.length > 0) {
     return res.send({ error: "email already exist" });
   } else {
-    bcrypt.hash(password, 10, function (err, hash) {
+    const otp = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
+    bcrypt.hash(password, 10, async function (err, hash) {
       const user = new User({
         name: name,
         email: email,
         password: hash,
+        otp: otp,
       });
       user.save();
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: "mdronyrsk01724@gmail.com",
+          pass: "ogeb negx qfxn hqiu",
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: "mdronyrsk01724@gmail.com",
+        to: email,
+        subject: "This you email varification ✔",
+        html: `Here is your otp: ${otp}`,
+      });
+
       res.send({
         name: user.name,
         email: user.email,
         role: user.role,
+        otp: user.otp,
       });
     });
   }
